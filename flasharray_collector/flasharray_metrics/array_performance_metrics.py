@@ -1,6 +1,6 @@
-from prometheus_client.core import GaugeMetricFamily
-from . import mappings
+from prometheus_client.core import GaugeMetricFamily, HistogramMetricFamily
 
+from . import mappings
 
 class ArrayPerformanceMetrics():
     """
@@ -25,6 +25,9 @@ class ArrayPerformanceMetrics():
         self.qdepth = GaugeMetricFamily('purefa_array_performance_qdepth',
                                         'FlashArray queue depth',
                                         labels=['dimension'])
+        self.latency_histogram = HistogramMetricFamily('purefa_array_performance_latency_usec',
+                                                        'FlashArray latency histogram',
+                                                       labels=['dimension'])
 
     def _mk_metric(self, metric, entity_list, mapping):
         """
@@ -35,13 +38,32 @@ class ArrayPerformanceMetrics():
             if k in entity_list:
                 metric.add_metric([mapping[k]], entity_list[k] if entity_list[k] is not None else 0)
 
+    def _mk_metric_histogram(self, metric, entity_list, mapping):
+        """
+        Create metrics of histogram type, with dimension as label.
+        Metrics values can be iterated over.
+        """
+        for k in mapping:
+            if k in entity_list:
+                if entity_list[k] <= 1000:
+                    metric.add_metric([mapping[k]], [["1000", 1]], 1)
+
     def _latency(self):
         """
         Create array latency performance metrics of gauge type.
         Metrics values can be iterated over.
         """
         self._mk_metric(self.latency,
-                        self.fa.get_array(), 
+                        self.fa.get_array(),
+                        mappings.array_latency_mapping)
+
+    def _latency_histogram(self):
+        """
+        Create array latency performance metrics of gauge type.
+        Metrics values can be iterated over.
+        """
+        self._mk_metric_histogram(self.latency_histogram,
+                        self.fa.get_array(),
                         mappings.array_latency_mapping)
 
     def _bandwidth(self):
@@ -50,7 +72,7 @@ class ArrayPerformanceMetrics():
         Metrics values can be iterated over.
         """
         self._mk_metric(self.bandwidth,
-                        self.fa.get_array(), 
+                        self.fa.get_array(),
                         mappings.array_bandwidth_mapping)
 
     def _iops(self):
@@ -59,7 +81,7 @@ class ArrayPerformanceMetrics():
         Metrics values can be iterated over.
         """
         self._mk_metric(self.iops,
-                        self.fa.get_array(), 
+                        self.fa.get_array(),
                         mappings.array_iops_mapping)
 
     def _avg_block_size(self):
@@ -68,7 +90,7 @@ class ArrayPerformanceMetrics():
         Metrics values can be iterated over.
         """
         self._mk_metric(self.avg_bsz,
-                        self.fa.get_array(), 
+                        self.fa.get_array(),
                         mappings.array_bsize_mapping)
 
     def _qdepth(self):
@@ -77,16 +99,18 @@ class ArrayPerformanceMetrics():
         Metrics values can be iterated over.
         """
         self._mk_metric(self.qdepth,
-                        self.fa.get_array(), 
+                        self.fa.get_array(),
                         mappings.array_qdepth_mapping)
 
     def get_metrics(self):
         self._latency()
+        self._latency_histogram()
         self._bandwidth()
         self._iops()
         self._avg_block_size()
         self._qdepth()
         yield self.latency
+        yield self.latency_histogram
         yield self.bandwidth
         yield self.iops
         yield self.avg_bsz
