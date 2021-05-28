@@ -43,7 +43,7 @@ class VolumeSpaceMetrics():
     def _thin_provision(self):
         for v in self.fa.get_volumes():
             v_name = self.__split_vname(v['name'])
-            self._thin_provision.add_metric([v_name[1], v['naaid'], v_name[0], v['vgroup']], v['thin_provisioning'] if v['thin_provisioning'] is not None else 0)
+            self.thin_provision.add_metric([v_name[1], v['naaid'], v_name[0], v['vgroup']], v['thin_provisioning'] if v['thin_provisioning'] is not None else 0)
 
     def _size(self):
         for v in self.fa.get_volumes():
